@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:aop="http://www.springframework.org/schema/aop"
+    xmlns:tx="http://www.springframework.org/schema/tx"
+    xmlns:context="http://www.springframework.org/schema/context"
+    xsi:schemaLocation="
+        http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd">
+        <!-- 上面是修改头，开启aop约束 -->
+        	
+        <!-- 做bean对象的扫描 -->
+			<context:component-scan base-package="com.avril"/>
+      <!-- 解析properties文件工具类 需要使用applicationContext -->
+		<bean id="propertyConfigurer" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+			<property name="location">
+			<!-- 注意路径问题，classpath：代表web项目下classes路径 -->
+			<value>classpath:configure.properties</value>
+		</property>
+		</bean>
+		
+		
+		
+	<!-- 配置datasource -->
+		<bean id="dataSource"  class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+			<property name="url">
+				<value>${db_url}</value>
+			</property>
+			<property name="username">
+				<value>${db_username}</value>
+			</property>
+			<property name="password">
+				<value>${db_password}</value>
+			</property>
+			<property name="driverClassName">
+				<value>oracle.jdbc.OracleDriver</value>
+			</property>
+		</bean>		
+		
+	
+		<!-- 配置sessionFactory 被注入方加 autowire自动装配 byName要求名字一样，bytype类型相同，父类子类也可
+			1.配置datasource
+			2.hibernate属性配置
+			3.hibernate映射配置文件 -->
+		<bean id="sessionFactory" class="org.springframework.orm.hibernate5.LocalSessionFactoryBean" autowire="byName">
+			
+			
+			
+			
+			<!-- 配置hibernate的属性 -->
+			<property name="hibernateProperties">
+				<props>
+					<prop key="hibernate.dialect">${dialect}</prop>
+					<prop key="hibernate,show_sql">true</prop>
+					<prop key="hibernate,format_sql">true</prop>
+				</props>
+			</property>
+			
+			
+			<!-- hibernate的映射配置文件 我们使用annotation，不用这个,例：
+			<property name="mappingResources">
+				<list>
+					<value>com/avril/domain/Users.hbm.xml</value>
+				</list>
+			</property>    -->
+			
+			
+			<!-- 基于anntation模式开发时。对于hibernate实体对象的引入 -->
+ 			<property name="annotatedClasses">
+ 				<list>
+ 					<value>com.avril.domain.Users</value>
+ 					<value>com.avril.domain.Cars</value>
+ 					<value>com.avril.domain.Customers</value>
+ 					<value>com.avril.domain.Funs</value>
+ 					<value>com.avril.domain.Loginlogs</value>
+ 					<value>com.avril.domain.Logs</value>
+ 					<value>com.avril.domain.Menus</value>
+ 					<value>com.avril.domain.Renttable</value>
+ 					<value>com.avril.domain.Roles</value>
+ 					<value>com.avril.domain.Checktable</value>
+ 				</list>
+ 			</property>
+			
+			
+		</bean>
+	
+	
+	
+	<!-- 配置hibernateTemplate 需要sessionfactory 可以用autowire注入-->
+	<bean id="hibernateTemplate" class="org.springframework.orm.hibernate5.HibernateTemplate" autowire="byName"></bean>
+
+
+
+	<!-- 配置事物 -->
+	<!-- 配置切面（aop）需要sessionfactory（事务由谁做） -->
+	<bean id="transActionManager" class="org.springframework.orm.hibernate5.HibernateTransactionManager" autowire="byName"></bean>
+	
+	<!-- 配置spring声明式事务的传播行为（事务的特性） transaction-manager名字相同不配置也行 （此部分事务该怎么做）-->
+	<tx:advice id="txAdvice" transaction-manager="transActionManager">
+		<tx:attributes>
+			<!-- require 必须运行在事务中，默认的  support有事物就在事务中运行 没有就不在事务中运行 -->
+			<tx:method name="add*" />
+			<tx:method name="save*"/>
+			<tx:method name="ins*"/>
+			<tx:method name="del*"/>
+			<tx:method name="update*"/>
+			<tx:method name="sel*" read-only="true"/>
+			<tx:method name="find*" read-only="true"/>
+			<tx:method name="pre*" read-only="true"/>
+		</tx:attributes>
+	</tx:advice>
+	
+	
+	<!-- 切点 （谁做事务？？？） -->
+	<aop:config>
+		<aop:pointcut expression="execution(* com.avril.service.impl.*.*(..))" id="mypoint"/>
+		<aop:advisor advice-ref="txAdvice" pointcut-ref="mypoint"/>
+	</aop:config>
+	
+	
+	
+	<!-- 配置basedaoimpl -->
+	<bean name="baseDao" class="com.avril.util.BaseDaoImpl" autowire="byName" abstract="true"></bean>
+	
+</beans>
